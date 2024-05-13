@@ -1,4 +1,3 @@
-import json
 import math as m
 import statistics
 import turtle as t
@@ -6,6 +5,14 @@ import tkinter as tk
 from tkinter import ttk
 from tkinter import filedialog
 import os
+import re
+import json
+
+def is_valid_filename(filename):
+    return 1 if re.match(r"^[^\\\/\:\*\?\"\<\>\|]*$", filename) and filename and re.match(r"^[^\.]+$",filename) else 0
+
+def update_status_bar(message):
+    status_label.config(text=message)
 
 def open_file_dialog(file_button):
     global angles
@@ -15,7 +22,7 @@ def open_file_dialog(file_button):
         angles = read_adofai_file(file_path)
         file_button.config(text=f"{len(angles)} 타일")
     elif file_path:
-        print("선택한 파일이 .adofai 파일이 아닙니다.")
+        update_status_bar("선택한 파일이 .adofai 파일이 아닙니다.")
 
 def is_adofai_file(file_path):
     _, extension = os.path.splitext(file_path)
@@ -26,39 +33,57 @@ def read_adofai_file(file_path):
     file_path = file_path.strip('"').replace('\\', '/')
     
     with open(file_path, "r", encoding="utf-8-sig") as file:
-        adofai_data = json.load(file)
+        adofai_data = json.load(file) 
         center = calculate_center(adofai_data["angleData"])
         
     return adofai_data["angleData"]
 
+def calculating_size(angles):
+    minimum = [0,0]
+    maximum = [0,0]
+    current = [0,0]
+    for i in angles:
+        current[0] += m.cos(m.radians(i))
+        current[1] += m.sin(m.radians(i))
+        minimum[0] = min(minimum[0], current[0])
+        minimum[1] = min(minimum[1], current[1])
+        maximum[0] = max(maximum[0], current[0])
+        maximum[1] = max(maximum[1], current[1])
+    # print(maximum[0] - minimum[0], maximum[1] - minimum[1])
+    return (maximum[0] - minimum[0] + maximum[1] - minimum[1])/2
+
 def draw_shape(angles, center = [0,0], start_index = 0):
     if not angles:
-        print('타일이 없습니다')
+        update_status_bar('타일이 없습니다')
         return
     
     tile_color = "#" + tile_color_entry.get()
     bg_color = "#" + bg_color_entry.get()
     scaling_value = int(size_combobox.get())
-    current = [-center[0],-center[1]]
     a = angles[start_index:] + angles[:start_index]
+    latest = 0
     
-    t.screensize(1000,1000)
-    t.hideturtle()
-    t.width(int(thickness_combobox.get()))
-    t.color(tile_color)
-    t.bgcolor(bg_color)
-    t.speed(0)
-    t.penup()
-    t.goto(current[0]*scaling_value,current[1]*scaling_value)
-    t.pendown()
+    turtle = t.RawTurtle(tScreen)
+    turtle.hideturtle()
+    turtle.width(int(thickness_combobox.get()))
+    turtle.color(tile_color)
+    tScreen.bgcolor(bg_color)
+    turtle.speed(0)
+    tScreen.delay(0)
+    turtle.penup()
+    turtle.goto(-center[0]*scaling_value,-center[1]*scaling_value)
+    turtle.pendown()
     
     for i in a:
-        current[0] += m.cos(m.radians(i))
-        current[1] += m.sin(m.radians(i))
-        t.goto(current[0] * scaling_value, current[1] * scaling_value)
-    
-    t.end_fill()
-
+        if i != 999:
+            turtle.seth(i)
+            turtle.forward(scaling_value)
+            latest = i
+        else: # 미드스핀인 경우
+            turtle.forward(scaling_value)
+            turtle.seth(-latest)
+            latest = -latest
+    turtle.end_fill()
 
 def calculate_center(angles, start_index = 0):
     a = angles[start_index:] + angles[:start_index]
@@ -72,58 +97,78 @@ def calculate_center(angles, start_index = 0):
     return [statistics.mean(coordinates[0]),statistics.mean(coordinates[1])]
 
 def clear():
-    t.clear()
-
-root = tk.Tk()
-root.geometry("600x75")
-root.resizable(False, False)
-root.title("Drawing shape")
-frame1 = tk.Frame(root)
-frame1.pack(pady=10)
-
-t.setup()
+    tScreen.clear()
+    tScreen.bgcolor("#" + bg_color_entry.get())
+    
+def save():
+    file_name = file_name_entry.get()
+    if (is_valid_filename(file_name)):
+        tScreen.getcanvas().postscript(file=f"{file_name}.eps")
+        update_status_bar(f"파일을 저장했습니다.")
+    else:
+        update_status_bar("유효하지 않은 파일 이름입니다.")
+        
+window = tk.Tk()
+window.title("Drawing shape")
+window.size()
+frame1 = tk.Frame(window)
+frame1.pack()
+frame2 = tk.Frame(window)
+frame2.pack()
+cv = t.ScrolledCanvas(frame1, width=768, height=768, canvheight=1536, canvwidth=1536)
+cv.pack()
+tScreen = t.TurtleScreen(cv)
+tScreen.bgcolor('#101121')
+window.resizable(False,False)
 
 angles = ""
 center = [0,0]
-size = [i for i in range(1,99)]
-thickness = [i for i in range(1,99)]
+size = [i for i in range(99,1,-1)]
+thickness = [i for i in range(99,1,-1)]
 
-file_label = tk.Label(frame1, text="파일")
+status_label = tk.Label(window, text="", bd=1, relief=tk.SUNKEN, anchor=tk.W)
+status_label.pack(fill=tk.X)
 
-tile_color_label = tk.Label(frame1, text="타일색")
+file_label = tk.Label(frame2, text="파일")
 
-bg_color_label = tk.Label(frame1, text="배경색")
+tile_color_label = tk.Label(frame2, text="타일색")
 
-size_label = tk.Label(frame1, text="크기")
+bg_color_label = tk.Label(frame2, text="배경색")
 
-thickness_label = tk.Label(frame1, text="두께")
+size_label = tk.Label(frame2, text="크기")
 
-file_button = tk.Button(frame1, text="파일 선택", width= 10, command=lambda: open_file_dialog(file_button))
+thickness_label = tk.Label(frame2, text="두께")
 
-tile_color_entry = tk.Entry(frame1, width=10)
+file_button = tk.Button(frame2, text="파일 선택", width= 8, command=lambda: open_file_dialog(file_button))
+
+tile_color_entry = tk.Entry(frame2, width=7, justify='center')
 tile_color_entry.insert(0, 'debb7b')
 
-bg_color_entry = tk.Entry(frame1, width=10)
+bg_color_entry = tk.Entry(frame2, width=7, justify='center')
 bg_color_entry.insert(0, '101121')
 
-size_combobox = ttk.Combobox(frame1, width=5, values=size)
-size_combobox.current(39)
+size_combobox = ttk.Combobox(frame2, width=3, values=size)
+size_combobox.current(79)
 
-thickness_combobox = ttk.Combobox(frame1, width=5, values=thickness)
-thickness_combobox.current(21)
+thickness_combobox = ttk.Combobox(frame2, width=3, values=thickness)
+thickness_combobox.current(88)
 
-draw_button = tk.Button(frame1, text='그리기', command=lambda: draw_shape(angles, center))
+draw_button = tk.Button(frame2, text='그리기', command=lambda: draw_shape(angles, center))
 
-clear_button = tk.Button(frame1, text='초기화', command=lambda: clear())
+clear_button = tk.Button(frame2, text='초기화', command=lambda: clear())
 
-widget = [[file_label,tile_color_label,bg_color_label,size_label,thickness_label],
-          [file_button, tile_color_entry,bg_color_entry,size_combobox,thickness_combobox,draw_button,clear_button]]
+file_name_entry = tk.Entry(frame2, width=10)
 
-for i in range(len(widget[0])):
-    widget[0][i].grid(row=0,column=i,padx=5)
-for i in range(len(widget[1])):
-    widget[1][i].grid(row=1,column=i,padx=5)
+save_button = tk.Button(frame2, text='그림 저장', command= lambda: save())
 
-t.bgcolor("#" + bg_color_entry.get())
+widget = [
+    [file_label,tile_color_label,bg_color_label,size_label,thickness_label],
+    [file_button, tile_color_entry, bg_color_entry, size_combobox, thickness_combobox, draw_button, clear_button],
+    [file_name_entry, save_button]
+    ]
 
-root.mainloop()
+for i in range(len(widget)):
+    for j in range(len(widget[i])):
+        widget[i][j].grid(row=i,column=j,padx=5)
+
+window.mainloop()
