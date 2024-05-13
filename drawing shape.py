@@ -20,9 +20,9 @@ def open_file_dialog(file_button):
     
     if file_path and is_adofai_file(file_path):
         angles = read_adofai_file(file_path)
-        file_button.config(text=f"{len(angles)} 타일")
+        file_button.config(text=f"{len(angles)}")
     elif file_path:
-        update_status_bar("선택한 파일이 .adofai 파일이 아닙니다.")
+        update_status_bar("The selected file is not an adofai file.")
 
 def is_adofai_file(file_path):
     _, extension = os.path.splitext(file_path)
@@ -54,7 +54,7 @@ def calculating_size(angles):
 
 def draw_shape(angles, center = [0,0], start_index = 0):
     if not angles:
-        update_status_bar('타일이 없습니다')
+        update_status_bar('There is no File')
         return
     
     tile_color = "#" + tile_color_entry.get()
@@ -103,18 +103,18 @@ def clear():
 def save():
     file_name = file_name_entry.get()
     if (is_valid_filename(file_name)):
-        tScreen.getcanvas().postscript(file=f"{file_name}.eps")
-        update_status_bar(f"파일을 저장했습니다.")
+        cv.postscript(file=f"{file_name}.eps")
+        update_status_bar(f"File saved")
     else:
-        update_status_bar("유효하지 않은 파일 이름입니다.")
+        update_status_bar("Invalid file name")
         
 window = tk.Tk()
-window.title("Drawing shape")
+window.title("ADOFAI Shape Drawing")
 window.size()
 frame1 = tk.Frame(window)
 frame1.pack()
 frame2 = tk.Frame(window)
-frame2.pack()
+frame2.pack(pady=10)
 cv = t.ScrolledCanvas(frame1, width=768, height=768, canvheight=1536, canvwidth=1536)
 cv.pack()
 tScreen = t.TurtleScreen(cv)
@@ -123,52 +123,69 @@ window.resizable(False,False)
 
 angles = ""
 center = [0,0]
-size = [i for i in range(99,1,-1)]
-thickness = [i for i in range(99,1,-1)]
+size = [i for i in range(50,1,-1)]
+thickness = [i for i in range(25,1,-1)]
 
 status_label = tk.Label(window, text="", bd=1, relief=tk.SUNKEN, anchor=tk.W)
 status_label.pack(fill=tk.X)
 
-file_label = tk.Label(frame2, text="파일")
+drawing_labelframe = tk.LabelFrame(frame2, text='Drawing')
 
-tile_color_label = tk.Label(frame2, text="타일색")
+file_label = tk.Label(drawing_labelframe, text="File")
 
-bg_color_label = tk.Label(frame2, text="배경색")
+tile_color_label = tk.Label(drawing_labelframe, text="Tile Color")
 
-size_label = tk.Label(frame2, text="크기")
+bg_color_label = tk.Label(drawing_labelframe, text="BG Color")
 
-thickness_label = tk.Label(frame2, text="두께")
+size_label = tk.Label(drawing_labelframe, text="Size")
 
-file_button = tk.Button(frame2, text="파일 선택", width= 8, command=lambda: open_file_dialog(file_button))
+thickness_label = tk.Label(drawing_labelframe, text="Thickness")
 
-tile_color_entry = tk.Entry(frame2, width=7, justify='center')
+file_button = tk.Button(drawing_labelframe, text="Select File", width= 8, command=lambda: open_file_dialog(file_button))
+
+tile_color_entry = tk.Entry(drawing_labelframe, width=7, justify='center')
 tile_color_entry.insert(0, 'debb7b')
 
-bg_color_entry = tk.Entry(frame2, width=7, justify='center')
+bg_color_entry = tk.Entry(drawing_labelframe, width=7, justify='center')
 bg_color_entry.insert(0, '101121')
 
-size_combobox = ttk.Combobox(frame2, width=3, values=size)
-size_combobox.current(79)
+size_combobox = ttk.Combobox(drawing_labelframe, width=3, values=size)
+size_combobox.current(30)
 
-thickness_combobox = ttk.Combobox(frame2, width=3, values=thickness)
-thickness_combobox.current(88)
+thickness_combobox = ttk.Combobox(drawing_labelframe, width=3, values=thickness)
+thickness_combobox.current(15)
 
-draw_button = tk.Button(frame2, text='그리기', command=lambda: draw_shape(angles, center))
+draw_button = tk.Button(drawing_labelframe, text='Draw', command=lambda: draw_shape(angles, center))
 
-clear_button = tk.Button(frame2, text='초기화', command=lambda: clear())
+clear_button = tk.Button(drawing_labelframe, text='Clear', command=lambda: clear())
 
-file_name_entry = tk.Entry(frame2, width=10)
+save_labelframe = tk.LabelFrame(frame2, text='Save')
 
-save_button = tk.Button(frame2, text='그림 저장', command= lambda: save())
+file_name_label = tk.Label(save_labelframe, text="File name")
 
-widget = [
+file_name_entry = tk.Entry(save_labelframe, width=10)
+
+save_button = tk.Button(save_labelframe, text='Save', command= lambda: save())
+
+drawing_widget = [
     [file_label,tile_color_label,bg_color_label,size_label,thickness_label],
     [file_button, tile_color_entry, bg_color_entry, size_combobox, thickness_combobox, draw_button, clear_button],
-    [file_name_entry, save_button]
     ]
 
-for i in range(len(widget)):
-    for j in range(len(widget[i])):
-        widget[i][j].grid(row=i,column=j,padx=5)
+save_widget = [
+    [file_name_label],
+    [file_name_entry, save_button]
+]
+
+for i in range(len(drawing_widget)):
+    for j in range(len(drawing_widget[i])):
+        drawing_widget[i][j].grid(row=i,column=j, padx=3)
+        
+for i in range(len(save_widget)):
+    for j in range(len(save_widget[i])):
+        save_widget[i][j].grid(row=i,column=j,padx=5)
+
+drawing_labelframe.grid(row=0, column=0, padx=10)
+save_labelframe.grid(row=0, column=1, padx=10)
 
 window.mainloop()
