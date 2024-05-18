@@ -7,6 +7,9 @@ from tkinter import filedialog
 import os
 import re
 import json
+from PIL import Image
+import matplotlib.image as mpimg
+import matplotlib.pyplot as plt
 
 def is_valid_filename(filename):
     return 1 if re.match(r"^[^\\\/\:\*\?\"\<\>\|]*$", filename) and filename and re.match(r"^[^\.]+$",filename) else 0
@@ -31,27 +34,14 @@ def is_adofai_file(file_path):
 def read_adofai_file(file_path):
     global center
     file_path = file_path.strip('"').replace('\\', '/')
-    
     with open(file_path, "r", encoding="utf-8-sig") as file:
-        adofai_data = json.load(file) 
-        adofai_data = json.load(file) 
+        f = file.read()
+        f = re.sub(",[ \t\r\n]+}", "}", f)
+        f = re.sub(",[ \t\r\n]+\]", "]", f)
+        adofai_data = json.loads(f) 
         center = calculate_center(adofai_data["angleData"])
         
     return adofai_data["angleData"]
-
-def calculating_size(angles):
-    minimum = [0,0]
-    maximum = [0,0]
-    current = [0,0]
-    for i in angles:
-        current[0] += m.cos(m.radians(i))
-        current[1] += m.sin(m.radians(i))
-        minimum[0] = min(minimum[0], current[0])
-        minimum[1] = min(minimum[1], current[1])
-        maximum[0] = max(maximum[0], current[0])
-        maximum[1] = max(maximum[1], current[1])
-    # print(maximum[0] - minimum[0], maximum[1] - minimum[1])
-    return (maximum[0] - minimum[0] + maximum[1] - minimum[1])/2
 
 def calculating_size(angles):
     minimum = [0,0]
@@ -77,19 +67,7 @@ def draw_shape(angles, center = [0,0], start_index = 0):
     scaling_value = int(size_combobox.get())
     a = angles[start_index:] + angles[:start_index]
     latest = 0
-    latest = 0
     
-    turtle = t.RawTurtle(tScreen)
-    turtle.hideturtle()
-    turtle.width(int(thickness_combobox.get()))
-    turtle.color(tile_color)
-    tScreen.bgcolor(bg_color)
-    turtle.speed(0)
-    tScreen.delay(0)
-    turtle.penup()
-    turtle.goto(-center[0]*scaling_value,-center[1]*scaling_value)
-    turtle.pendown()
-    turtle = t.RawTurtle(tScreen)
     turtle.hideturtle()
     turtle.width(int(thickness_combobox.get()))
     turtle.color(tile_color)
@@ -122,15 +100,46 @@ def calculate_center(angles, start_index = 0):
         coordinates[1].append(current[1])
     return [statistics.mean(coordinates[0]),statistics.mean(coordinates[1])]
 
+def path2angle(path):
+    
+    return angle
+
 def clear():
-    tScreen.clear()
-    tScreen.bgcolor("#" + bg_color_entry.get())
+    tScreen.reset()
+    turtle.hideturtle()
     
 def save():
-    file_name = file_name_entry.get()
+    file_name = file_name_entry.get() + '.eps'
     if (is_valid_filename(file_name)):
-        cv.postscript(file=f"{file_name}.eps")
-        update_status_bar(f"File saved")
+        cv.postscript(file=file_name)
+        extention = var.get()
+        eps_image = Image.open(file_name)
+        
+        if extention=='eps':
+            pass
+        
+        elif extention==".jpg" or extention==".png":
+            eps_image = Image.open(file_name)
+            eps_image.load(scale=1)
+            eps_image.save(f"{file_name[:-4]}{extention}")
+            eps_image.close()
+            os.remove(file_name)
+            
+        elif extention=='.svg':
+            fig = plt.figure()
+            svgfile   = f'{file_name[:-4]}.svg'
+            logoax    = [0, 0, 1, 1]
+            img=mpimg.imread(file_name)
+            
+            newax = fig.add_axes(logoax, anchor='SW', zorder=100)
+            newax.imshow(img)
+            newax.axis('off')
+            
+            fig.savefig(svgfile,dpi=300)
+            eps_image.close()
+            os.remove(f"{file_name}.eps")
+            
+        update_status_bar(f"{file_name}{extention} file saved")
     else:
         update_status_bar("Invalid file name")
         
@@ -146,6 +155,7 @@ cv.pack()
 tScreen = t.TurtleScreen(cv)
 tScreen.bgcolor('#101121')
 window.resizable(False,False)
+turtle = t.RawTurtle(tScreen)
 
 angles = ""
 center = [0,0]
@@ -193,6 +203,15 @@ file_name_entry = tk.Entry(save_labelframe, width=10)
 
 save_button = tk.Button(save_labelframe, text='Save', command= lambda: save())
 
+extention_frame = tk.Frame(save_labelframe)
+extention_frame.grid(row=2,column=0,columnspan=2)
+
+
+var = tk.StringVar(value=".eps")
+eps_radiobutton = tk.Radiobutton(extention_frame, text=".eps", variable=var, value=".eps")
+svg_radiobutton = tk.Radiobutton(extention_frame, text=".svg", variable=var, value=".svg")
+jpg_radiobutton = tk.Radiobutton(extention_frame, text=".jpg", variable=var, value=".jpg")
+png_radiobutton = tk.Radiobutton(extention_frame, text=".png", variable=var, value=".png")
 drawing_widget = [
     [file_label,tile_color_label,bg_color_label,size_label,thickness_label],
     [file_button, tile_color_entry, bg_color_entry, size_combobox, thickness_combobox, draw_button, clear_button],
@@ -200,16 +219,24 @@ drawing_widget = [
 
 save_widget = [
     [file_name_label],
-    [file_name_entry, save_button]
+    [file_name_entry, save_button],
+]
+
+extention_widget = [
+    [eps_radiobutton, jpg_radiobutton, png_radiobutton, svg_radiobutton]
 ]
 
 for i in range(len(drawing_widget)):
     for j in range(len(drawing_widget[i])):
-        drawing_widget[i][j].grid(row=i,column=j, padx=3)
+        drawing_widget[i][j].grid(row=i,column=j, padx=3, pady=2)
         
 for i in range(len(save_widget)):
     for j in range(len(save_widget[i])):
         save_widget[i][j].grid(row=i,column=j,padx=5)
+        
+for i in range(len(extention_widget)):
+    for j in range(len(extention_widget[i])):
+        extention_widget[i][j].grid(row=i,column=j,padx=5)
 
 drawing_labelframe.grid(row=0, column=0, padx=10)
 save_labelframe.grid(row=0, column=1, padx=10)
