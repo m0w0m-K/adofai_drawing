@@ -100,10 +100,6 @@ def calculate_center(angles, start_index = 0):
         coordinates[1].append(current[1])
     return [statistics.mean(coordinates[0]),statistics.mean(coordinates[1])]
 
-def path2angle(path):
-    
-    return angle
-
 def clear():
     tScreen.reset()
     turtle.hideturtle()
