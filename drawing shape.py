@@ -34,9 +34,24 @@ def read_adofai_file(file_path):
     
     with open(file_path, "r", encoding="utf-8-sig") as file:
         adofai_data = json.load(file) 
+        adofai_data = json.load(file) 
         center = calculate_center(adofai_data["angleData"])
         
     return adofai_data["angleData"]
+
+def calculating_size(angles):
+    minimum = [0,0]
+    maximum = [0,0]
+    current = [0,0]
+    for i in angles:
+        current[0] += m.cos(m.radians(i))
+        current[1] += m.sin(m.radians(i))
+        minimum[0] = min(minimum[0], current[0])
+        minimum[1] = min(minimum[1], current[1])
+        maximum[0] = max(maximum[0], current[0])
+        maximum[1] = max(maximum[1], current[1])
+    # print(maximum[0] - minimum[0], maximum[1] - minimum[1])
+    return (maximum[0] - minimum[0] + maximum[1] - minimum[1])/2
 
 def calculating_size(angles):
     minimum = [0,0]
@@ -62,7 +77,18 @@ def draw_shape(angles, center = [0,0], start_index = 0):
     scaling_value = int(size_combobox.get())
     a = angles[start_index:] + angles[:start_index]
     latest = 0
+    latest = 0
     
+    turtle = t.RawTurtle(tScreen)
+    turtle.hideturtle()
+    turtle.width(int(thickness_combobox.get()))
+    turtle.color(tile_color)
+    tScreen.bgcolor(bg_color)
+    turtle.speed(0)
+    tScreen.delay(0)
+    turtle.penup()
+    turtle.goto(-center[0]*scaling_value,-center[1]*scaling_value)
+    turtle.pendown()
     turtle = t.RawTurtle(tScreen)
     turtle.hideturtle()
     turtle.width(int(thickness_combobox.get()))
