@@ -11,6 +11,62 @@ from PIL import Image
 import matplotlib.image as mpimg
 import matplotlib.pyplot as plt
 
+def path2angle(path):
+    angle = [i for i in path]
+    for i in range(len(angle)):
+        match angle[i]:
+            case "R":
+                angle[i] = 0
+            case "p":
+                angle[i] = 15
+            case "J":
+                angle[i] = 30
+            case "E":
+                angle[i] = 45
+            case "T":
+                angle[i] = 60
+            case "o":
+                angle[i] = 75
+            case "U":
+                angle[i] = 90
+            case "q":
+                angle[i] = 105
+            case "G":
+                angle[i] = 120
+            case "Q":
+                angle[i] = 135
+            case "H":
+                angle[i] = 150
+            case "W":
+                angle[i] = 165
+            case "L":
+                angle[i] = 180
+            case "x":
+                angle[i] = 195
+            case "N":
+                angle[i] = 210
+            case "Z":
+                angle[i] = 225
+            case "F":
+                angle[i] = 240
+            case "V":
+                angle[i] = 255
+            case "D":
+                angle[i] = 270
+            case "Y":
+                angle[i] = 285
+            case "B":
+                angle[i] = 300
+            case "C":
+                angle[i] = 315
+            case "M":
+                angle[i] = 330
+            case "A":
+                angle[i] = 345
+            case "!":
+                angle[i] = 999
+    return angle
+            
 def is_valid_filename(filename):
     return 1 if re.match(r"^[^\\\/\:\*\?\"\<\>\|]*$", filename) and filename and re.match(r"^[^\.]+$",filename) else 0
 
@@ -23,7 +79,8 @@ def open_file_dialog(file_button):
     
     if file_path and is_adofai_file(file_path):
         angles = read_adofai_file(file_path)
-        file_button.config(text=f"{len(angles)}")
+        midspinCount = angles.count(999)
+        file_button.config(text=len(angles)-midspinCount)
     elif file_path:
         update_status_bar("The selected file is not an adofai file.")
 
@@ -34,14 +91,22 @@ def is_adofai_file(file_path):
 def read_adofai_file(file_path):
     global center
     file_path = file_path.strip('"').replace('\\', '/')
+    
     with open(file_path, "r", encoding="utf-8-sig") as file:
         f = file.read()
-        f = re.sub(",[ \t\r\n]+}", "}", f)
-        f = re.sub(",[ \t\r\n]+\]", "]", f)
-        adofai_data = json.loads(f) 
-        center = calculate_center(adofai_data["angleData"])
+        f = re.sub(',[ \t\r\n]+}', "}", f)
+        f = re.sub(',[ \t\r\n]+\]', "]", f)
+        f = re.sub('\][\t\r\n]+\"', "], \"", f)
+        adofai_data = json.loads(f)
         
-    return adofai_data["angleData"]
+        if "pathData" in adofai_data:
+            angle = path2angle(adofai_data['pathData'])
+        elif "angleData" in adofai_data:
+            angle = path2angle(adofai_data['angleData'])
+        
+        center = calculate_center(angle)
+        
+    return angle
 
 def calculating_size(angles):
     minimum = [0,0]
@@ -83,10 +148,11 @@ def draw_shape(angles, center = [0,0], start_index = 0):
             turtle.seth(i)
             turtle.forward(scaling_value)
             latest = i
-        else: # 미드스핀인 경우
+        else:
+            latest += 180
+            turtle.seth(latest)
             turtle.forward(scaling_value)
-            turtle.seth(-latest)
-            latest = -latest
+            
     turtle.end_fill()
 
 def calculate_center(angles, start_index = 0):
@@ -152,6 +218,7 @@ tScreen = t.TurtleScreen(cv)
 tScreen.bgcolor('#101121')
 window.resizable(False,False)
 turtle = t.RawTurtle(tScreen)
+turtle.hideturtle()
 
 angles = ""
 center = [0,0]
@@ -201,7 +268,6 @@ save_button = tk.Button(save_labelframe, text='Save', command= lambda: save())
 
 extention_frame = tk.Frame(save_labelframe)
 extention_frame.grid(row=2,column=0,columnspan=2)
-
 
 var = tk.StringVar(value=".eps")
 eps_radiobutton = tk.Radiobutton(extention_frame, text=".eps", variable=var, value=".eps")
